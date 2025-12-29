@@ -1,8 +1,10 @@
 "use client";
 
+import { uploadImageToS3 } from "@/lib/api/products";
 import { ProductFormValues } from "@/lib/schemas/productForm.schema";
+import { useToaster } from "@/proviers/toaster/toaster.hook";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Control, FieldErrors, useController } from "react-hook-form";
 
 const CATEGORIES = ["TOP", "BOTTOM", "DRESS", "OUTER", "SKIRT", "SHOES", "ACC"];
@@ -19,29 +21,26 @@ export function ProductInfoSection({
   const { field: priceField } = useController({ name: "price", control });
   const { field: categoryField } = useController({ name: "category", control });
 
-  const [preview, setPreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const toaster = useToaster();
+  const currentImageUrl = imageField.value;
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      imageField.onChange(file);
-
-      const objectUrl = URL.createObjectURL(file);
-      setPreview(objectUrl);
+      setIsUploading(true);
+      try {
+        const response = await uploadImageToS3(file);
+        imageField.onChange(response.url);
+        toaster("info", "이미지를 업로드했습니다.");
+      } catch (error) {
+        toaster("warn", "이미지 업로드에 실패했습니다.");
+        console.error(error);
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
-
-  useEffect(() => {
-    if (typeof imageField.value === "string" && imageField.value) {
-      setPreview(imageField.value);
-    }
-  }, [imageField.value]);
-
-  useEffect(() => {
-    return () => {
-      if (preview) URL.revokeObjectURL(preview);
-    };
-  }, [preview]);
 
   return (
     <section className="mb-[60px]">
@@ -79,15 +78,19 @@ export function ProductInfoSection({
               accept="image/*"
               onChange={handleImageChange}
               style={{ display: "none" }}
+              disabled={isUploading}
             />
             <button
               type="button"
               onClick={() => document.getElementById("product-image")?.click()}
-              className="bg-gray05 relative h-[240px] w-[240px] overflow-hidden rounded-md p-[100px]"
+              className="bg-gray05 relative flex h-[240px] w-[240px] items-center justify-center overflow-hidden rounded-md p-[100px]"
+              disabled={isUploading}
             >
-              {preview ? (
+              {isUploading ? (
+                <div>Uploading...</div>
+              ) : currentImageUrl ? (
                 <Image
-                  src={preview}
+                  src={currentImageUrl}
                   alt="선택된 상품 이미지"
                   fill
                   className="object-cover"

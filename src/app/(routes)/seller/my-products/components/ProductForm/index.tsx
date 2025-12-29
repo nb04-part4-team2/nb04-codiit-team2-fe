@@ -13,9 +13,10 @@ import { ProductStockSection } from "./ProductStockSection";
 interface ProductFormProps {
   initialValues?: ProductFormValues;
   onSubmit: (data: ProductFormValues) => void;
+  mode: "create" | "edit";
 }
-
-export default function ProductForm({ initialValues, onSubmit }: ProductFormProps) {
+// 수정, 삭제 랜더링을 initialValues의 유무가 아닌 mode로 판단
+export default function ProductForm({ mode, initialValues, onSubmit }: ProductFormProps) {
   const {
     reset,
     control,
@@ -24,21 +25,7 @@ export default function ProductForm({ initialValues, onSubmit }: ProductFormProp
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
     mode: "onBlur",
-    defaultValues: initialValues ?? {
-      name: "",
-      image: null,
-      price: undefined,
-      category: undefined,
-      sizes: [],
-      stocks: {},
-      discount: {
-        enabled: false,
-        value: null,
-        periodEnabled: false,
-        periodStart: null,
-        periodEnd: null,
-      },
-    },
+    defaultValues: initialValues,
   });
 
   useEffect(() => {
@@ -68,7 +55,7 @@ export default function ProductForm({ initialValues, onSubmit }: ProductFormProp
       <div className="mt-[126px] flex justify-center">
         <Button
           type="submit"
-          label={initialValues ? "수정하기" : "등록하기"}
+          label={mode === "edit" ? "수정하기" : "등록하기"}
           className="h-[65px] w-[500px] text-lg"
           variant="primary"
           size="large"

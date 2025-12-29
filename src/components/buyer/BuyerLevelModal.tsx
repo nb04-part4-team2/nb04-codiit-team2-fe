@@ -41,7 +41,7 @@ export default function BuyerLevelModal({ isOpen, onClose, grade }: BuyerLevelMo
             height={24}
           />
         </button>
-        <span className="text-black01 text-lg font-extrabold">내 등급 {grade?.name || '-'}</span>
+        <span className="text-black01 text-lg font-extrabold">내 등급 {grade?.name || "-"}</span>
         <div className="flex h-full w-full flex-col gap-5">
           {Level.map((item) => (
             <div

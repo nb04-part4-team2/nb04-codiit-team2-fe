@@ -1,6 +1,5 @@
 import { ProductInfoData, ProductListResponse } from "@/types/Product";
 import { ProductInquiryResponse } from "@/types/inquiry";
-import { toProductFormData } from "@/utils/formData/toProductFormData";
 import { ProductFormValues } from "../schemas/productForm.schema";
 import { getAxiosInstance } from "./axiosInstance";
 
@@ -23,15 +22,63 @@ interface GetProductInquiryParams {
   status?: "CompletedAnswer" | "WaitingAnswer";
 }
 
+interface ProductPayload {
+  id?: string;
+  name: string;
+  price: number;
+  categoryName: string;
+  content: string;
+  image?: string | null;
+  stocks: {
+    sizeId: number;
+    quantity: number;
+  }[];
+  discountRate?: number | null;
+  discountStartTime?: string;
+  discountEndTime?: string;
+}
+
 // 새 상품 등록
 export const createProduct = async (data: ProductFormValues): Promise<ProductInfoData> => {
   const axiosInstance = getAxiosInstance();
-  const formData = toProductFormData(data);
-  const response = await axiosInstance.post("/products", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+
+  const sizeNameToIdMap: Record<string, number> = {
+    xs: 1,
+    s: 2,
+    m: 3,
+    l: 4,
+    xl: 5,
+    free: 6,
+  };
+  const stocksArray = Object.entries(data.stocks || {})
+    .filter(([, quantity]) => typeof quantity === "number")
+    .map(([sizeName, quantity]) => ({
+      sizeId: sizeNameToIdMap[sizeName.toLowerCase()],
+      quantity: quantity as number,
+    }));
+
+  const payload: ProductPayload = {
+    name: data.name,
+    price: data.price,
+    categoryName: data.category.toLowerCase(),
+    content: data.detail,
+    image: data.image,
+    stocks: stocksArray,
+  };
+
+  if (data.discount.enabled && typeof data.discount.value === "number") {
+    payload.discountRate = data.discount.value;
+    if (data.discount.periodEnabled) {
+      if (data.discount.periodStart) {
+        payload.discountStartTime = new Date(data.discount.periodStart).toISOString();
+      }
+      if (data.discount.periodEnd) {
+        payload.discountEndTime = new Date(data.discount.periodEnd).toISOString();
+      }
+    }
+  }
+
+  const response = await axiosInstance.post("/products", payload);
   return response.data;
 };
 
@@ -50,12 +97,45 @@ export const getProducts = async (params: GetProductsParams): Promise<ProductLis
 // 상품 수정 patch
 export const updateProduct = async (productId: string, data: ProductFormValues) => {
   const axiosInstance = getAxiosInstance();
-  const formData = toProductFormData(data);
-  const response = await axiosInstance.patch(`/products/${productId}`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+
+  const sizeNameToIdMap: Record<string, number> = {
+    xs: 1,
+    s: 2,
+    m: 3,
+    l: 4,
+    xl: 5,
+    free: 6,
+  };
+  const stocksArray = Object.entries(data.stocks || {})
+    .filter(([, quantity]) => typeof quantity === "number")
+    .map(([sizeName, quantity]) => ({
+      sizeId: sizeNameToIdMap[sizeName.toLowerCase()],
+      quantity: quantity as number,
+    }));
+
+  const payload: ProductPayload = {
+    id: productId,
+    name: data.name,
+    price: data.price,
+    categoryName: data.category.toLowerCase(),
+    content: data.detail,
+    image: data.image,
+    stocks: stocksArray,
+  };
+
+  if (data.discount.enabled && typeof data.discount.value === "number") {
+    payload.discountRate = data.discount.value;
+    if (data.discount.periodEnabled) {
+      if (data.discount.periodStart) {
+        payload.discountStartTime = new Date(data.discount.periodStart).toISOString();
+      }
+      if (data.discount.periodEnd) {
+        payload.discountEndTime = new Date(data.discount.periodEnd).toISOString();
+      }
+    }
+  }
+
+  const response = await axiosInstance.patch(`/products/${productId}`, payload);
   return response.data;
 };
 

@@ -11,11 +11,7 @@ export const storeCreateSchema = z.object({
     .min(1, "전화번호를 입력하세요")
     .regex(/^\d{2,3}-?\d{3,4}-?\d{4}$/, "유효한 전화번호를 입력하세요"),
 
-  image: z
-    .custom<File>((file) => file instanceof File, {
-      message: "이미지를 선택하세요.",
-    })
-    .optional(),
+  image: z.string().min(1, "이미지를 선택하세요.").optional(),
   description: z.string().min(10, "스토어 설명은 최소 10자 이상입니다"),
 });
 

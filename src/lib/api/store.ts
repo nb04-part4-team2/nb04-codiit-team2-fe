@@ -1,19 +1,30 @@
 import { StoreCreateForm } from "@/lib/schemas/storecreate.schema";
 import { MyProductsResponse } from "@/types/sellerProduct";
 import { Store, StoreDetailResponse } from "@/types/store";
-import { toStoreFormData } from "@/utils/formData/toStoreFormData";
 import axios from "axios";
 import { getAxiosInstance } from "./axiosInstance";
+
+interface StorePayload {
+  name: string;
+  address: string;
+  detailAddress: string;
+  phoneNumber: string;
+  content: string;
+  image?: string | null;
+}
 
 // 스토어 등록
 export async function createStore(data: StoreCreateForm): Promise<StoreDetailResponse> {
   const axiosInstance = getAxiosInstance();
-  const formData = toStoreFormData(data);
-  const res = await axiosInstance.post("/stores", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  const payload: StorePayload = {
+    name: data.storeName,
+    address: data.address.basic,
+    detailAddress: data.address.detail ?? "",
+    phoneNumber: data.phoneNumber,
+    content: data.description,
+    image: data.image,
+  };
+  const res = await axiosInstance.post("/stores", payload);
   return res.data;
 }
 
@@ -34,12 +45,15 @@ export const getMyStore = async (): Promise<StoreDetailResponse | null> => {
 // 스토어 수정
 export async function editStore(storeId: string, data: StoreCreateForm): Promise<StoreDetailResponse> {
   const axiosInstance = getAxiosInstance();
-  const formData = toStoreFormData(data);
-  const response = await axiosInstance.patch(`/stores/${storeId}`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  const payload: StorePayload = {
+    name: data.storeName,
+    address: data.address.basic,
+    detailAddress: data.address.detail ?? "",
+    phoneNumber: data.phoneNumber,
+    content: data.description,
+    image: data.image,
+  };
+  const response = await axiosInstance.patch(`/stores/${storeId}`, payload);
   return response.data;
 }
 
