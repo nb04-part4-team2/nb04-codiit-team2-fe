@@ -35,6 +35,7 @@ export interface CartProduct {
   name: string;
   price: number;
   image: string;
+  discountPrice: number;
   discountRate: number;
   discountStartTime: string | null;
   discountEndTime: string | null;

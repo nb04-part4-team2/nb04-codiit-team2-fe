@@ -1,7 +1,6 @@
 import { CartItem } from "@/types/cart";
 import Image from "next/image";
 import ShoppingCountButton from "../button/ShoppintCountButton";
-import { ProductInfoData } from "@/types/Product";
 
 // sizeId에 따른 사이즈 매핑
 const getSizeLabel = (sizeId: number): string => {
@@ -32,8 +31,8 @@ interface CartItemCardProps {
 }
 
 export default function CartItemCard({ item, isChecked, onCheck, onQuantityChange, onDelete }: CartItemCardProps) {
-  const discountedPrice = Math.floor((item.product as ProductInfoData).discountPrice ?? item.product.price * (1 - item.product.discountRate / 100));
-  const totalPrice = discountedPrice * item.quantity;
+  const discountedPrice = item.product.discountPrice;
+  const totalPrice = Math.floor(discountedPrice) * item.quantity;
 
   return (
     <div className="border-gray03 relative rounded-2xl border bg-white p-7.5">
@@ -72,14 +71,14 @@ export default function CartItemCard({ item, isChecked, onCheck, onQuantityChang
                   />
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                  {item.product.discountRate > 0 && (
+                  {item.product.price > item.product.discountPrice && (
                     <div className="flex items-center gap-4">
                       <p className="text-gray01 text-base line-through">{item.product.price.toLocaleString()}원</p>
                       <p className="text-red01 text-base font-bold">{item.product.discountRate}% 할인</p>
                     </div>
                   )}
                   <div className="flex flex-col items-end gap-1">
-                    <p className="text-lg font-extrabold">{discountedPrice.toLocaleString()}원</p>
+                    <p className="text-lg font-extrabold">{Math.floor(discountedPrice).toLocaleString()}원</p>
                     <p className="text-black01 text-base">총 {totalPrice.toLocaleString()}원</p>
                   </div>
                 </div>
