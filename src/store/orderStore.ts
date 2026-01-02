@@ -1,10 +1,9 @@
-import { CartItem } from "@/types/cart";
-import { CreateOrderRequest, OrderItemRequest } from "@/types/order";
+import { CreateOrderRequest, OrderItemInfo, OrderItemRequest } from "@/types/order";
 import { create } from "zustand";
 
 interface OrderStore {
   // 선택된 장바구니 아이템들
-  selectedItems: CartItem[];
+  selectedItems: OrderItemInfo[];
   // 주문 정보
   orderInfo: {
     name: string;
@@ -14,7 +13,7 @@ interface OrderStore {
     usePoint: number;
   };
   // 액션
-  setSelectedItems: (items: CartItem[]) => void;
+  setSelectedItems: (items: OrderItemInfo[]) => void;
   setOrderInfo: (info: Partial<OrderStore["orderInfo"]>) => void;
   // 주문 요청 데이터 생성
   getOrderRequest: () => CreateOrderRequest;

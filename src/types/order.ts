@@ -1,3 +1,6 @@
+import { CartProduct } from "./cart";
+import { ProductInfoData } from "./Product";
+
 export interface OrderItem {
   id: string;
   price: number;
@@ -85,4 +88,13 @@ export interface OrderItemResponse {
       ko: string;
     };
   };
+}
+
+export interface OrderItemInfo {
+  id: string;
+  productId: string;
+  sizeId: number;
+  quantity: number;
+  product: CartProduct | ProductInfoData;
+  checked?: boolean;
 }

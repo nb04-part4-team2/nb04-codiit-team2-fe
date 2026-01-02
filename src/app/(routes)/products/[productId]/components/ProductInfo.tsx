@@ -10,7 +10,9 @@ import { useOrderStore } from "@/store/orderStore";
 import { useUserStore } from "@/stores/userStore";
 import { ProductInfoData } from "@/types/Product";
 import { CartEdit, CartEditSize } from "@/types/cart";
+import { OrderItemInfo } from "@/types/order";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -35,109 +37,121 @@ const ProductInfo = ({ productId, data }: ProductInfoProps) => {
   const router = useRouter();
   const toaster = useToaster();
 
-  const { data: cartData, refetch: refetchCartData } = useQuery({
-    queryKey: ["cartData"],
+  const { data: cartData } = useQuery({
+    queryKey: ["cartData", productId],
     queryFn: () => getCart(),
-    enabled: user !== null,
-    select: (data): CartEditSize[] => {
-      return data.items
-        .filter((i) => {
-          return i.productId === productId;
-        })
-        .map((i) => {
-          return { sizeId: i.sizeId, quantity: i.quantity };
-        });
+    enabled: user !== null && user.type === "BUYER",
+    select: (cart): CartEditSize[] => {
+      return cart.items
+        .filter((i) => i.productId === productId)
+        .map((i) => ({ sizeId: i.sizeId, quantity: i.quantity }));
+    },
+    retry: (failureCount, error) => {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        return false;
+      }
+      return failureCount < 3;
     },
   });
 
   const { mutate: editCart, isPending } = useMutation({
     mutationFn: (body: CartEdit) => patchCart(body),
     onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ["cartData", productId] });
       queryClient.invalidateQueries({ queryKey: ["cart"] });
-      setSelectedItems(
-        response.map((item) => {
-          return { ...item, product: data as ProductInfoData };
-        })
-      );
+      setSelectedItems(response.map((item) => ({ ...item, product: data as ProductInfoData })));
       setOptions([]);
+      setIsModalOpen(true);
     },
-    onError: (error) => {
-      toaster("warn", error.message);
+    onError: async (error: unknown, variables: CartEdit) => {
+      if (axios.isAxiosError(error) && error.response?.status === 400) {
+        try {
+          await postCart();
+          editCart(variables);
+        } catch (postError) {
+          if (axios.isAxiosError(postError)) {
+            toaster("warn", postError.response?.data.message);
+          }
+        }
+      } else if (axios.isAxiosError(error)) {
+        toaster("warn", error.response?.data.message);
+      }
     },
   });
 
-  // 상품 선택 개수
-  const totalCount = options.map((option) => option.quantity).reduce((acc, cur) => acc + cur, 0);
+  const totalCount = options.reduce((acc, cur) => acc + cur.quantity, 0);
 
-  // 옵션 추가 함수
   const handleSelect = (value: number) => {
-    if (options.map((option) => option.sizeId).includes(value)) {
+    if (options.some((option) => option.sizeId === value)) {
       toaster("warn", "이미 선택한 옵션입니다.");
       return;
     }
     setOptions((prev) => [...prev, { sizeId: value, quantity: 1 }]);
   };
 
-  const setModalOpen = () => {
-    setIsModalOpen(true);
-  };
-
-  // 장바구니 담기
-  // 카트 생성이 안되있을경우 카트 수정이 불가능 하여 카트 생성 후 카트에 상품 담도록 설정
-  const addCart = async () => {
+  const addCart = () => {
     if (options.length === 0) {
       toaster("warn", "옵션을 선택해 주세요.");
       return;
     }
-    // 로그인 확인
     if (!user) {
       toaster("warn", "로그인이 필요합니다.");
       return;
     }
-    // 셀러일 경우 바이어 로그인 요청
     if (user.type === "SELLER") {
       toaster("warn", "바이어로 로그인해 주세요.");
       return;
     }
 
-    await postCart(); // 카트 생성
-
-    // 카트에 있는 상품 갯수와 추가로 담을 상품 갯수 합치기
     const grouped: { [key: number]: CartEditSize } = {};
+    const itemsToGroup = cartData ? [...options, ...cartData] : options;
 
-    if (cartData !== undefined) {
-      [options, cartData].forEach((arr) => {
-        arr.forEach(({ sizeId, quantity }) => {
-          grouped[sizeId] = { sizeId, quantity: (grouped[sizeId]?.quantity || 0) + quantity };
-        });
-      });
-    }
+    itemsToGroup.forEach(({ sizeId, quantity }) => {
+      grouped[sizeId] = { sizeId, quantity: (grouped[sizeId]?.quantity || 0) + quantity };
+    });
 
-    editCart({ productId, sizes: Object.values(grouped) });
-    refetchCartData();
-    setModalOpen();
+    const newSizes = options.map((opt) => {
+      const existingItem = cartData?.find((item) => item.sizeId === opt.sizeId);
+      return {
+        sizeId: opt.sizeId,
+        quantity: opt.quantity + (existingItem?.quantity || 0),
+      };
+    });
+
+    const existingSizes =
+      cartData
+        ?.filter((item) => !options.some((opt) => opt.sizeId === item.sizeId))
+        .map((item) => ({ sizeId: item.sizeId, quantity: item.quantity })) || [];
+
+    editCart({ productId, sizes: [...newSizes, ...existingSizes] });
   };
 
-  // 구매하기
-  const orderProduct = async () => {
+  const orderProduct = () => {
     if (options.length === 0) {
       toaster("warn", "옵션을 선택해 주세요.");
       return;
     }
-    // 로그인 확인
     if (!user) {
       toaster("warn", "로그인이 필요합니다.");
       return;
     }
-    // 셀러일 경우 바이어 로그인 요청
     if (user.type === "SELLER") {
       toaster("warn", "바이어로 로그인해 주세요.");
       return;
     }
 
-    await postCart(); // 카트 생성
-    editCart({ productId, sizes: options });
+    const orderItems: OrderItemInfo[] = options.map((opt) => {
+      const tempItemId = `${productId}-${opt.sizeId}`;
+      return {
+        id: tempItemId,
+        productId: productId,
+        sizeId: opt.sizeId,
+        quantity: opt.quantity,
+        product: data,
+      };
+    });
 
+    setSelectedItems(orderItems);
     router.push("/buyer/order");
   };
 
