@@ -34,8 +34,8 @@ interface ProductPayload {
     quantity: number;
   }[];
   discountRate?: number | null;
-  discountStartTime?: string;
-  discountEndTime?: string;
+  discountStartTime?: string | null;
+  discountEndTime?: string | null;
 }
 
 // 새 상품 등록
@@ -75,7 +75,14 @@ export const createProduct = async (data: ProductFormValues): Promise<ProductInf
       if (data.discount.periodEnd) {
         payload.discountEndTime = new Date(data.discount.periodEnd).toISOString();
       }
+    } else {
+      payload.discountStartTime = null;
+      payload.discountEndTime = null;
     }
+  } else {
+    payload.discountRate = null;
+    payload.discountStartTime = null;
+    payload.discountEndTime = null;
   }
 
   const response = await axiosInstance.post("/products", payload);
@@ -132,7 +139,14 @@ export const updateProduct = async (productId: string, data: ProductFormValues) 
       if (data.discount.periodEnd) {
         payload.discountEndTime = new Date(data.discount.periodEnd).toISOString();
       }
+    } else {
+      payload.discountStartTime = null;
+      payload.discountEndTime = null;
     }
+  } else {
+    payload.discountRate = null;
+    payload.discountStartTime = null;
+    payload.discountEndTime = null;
   }
 
   const response = await axiosInstance.patch(`/products/${productId}`, payload);
