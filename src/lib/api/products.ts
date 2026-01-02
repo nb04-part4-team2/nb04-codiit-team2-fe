@@ -144,7 +144,7 @@ export const updateProduct = async (productId: string, data: ProductFormValues) 
       payload.discountEndTime = null;
     }
   } else {
-    payload.discountRate = null;
+    payload.discountRate = 0;
     payload.discountStartTime = null;
     payload.discountEndTime = null;
   }
