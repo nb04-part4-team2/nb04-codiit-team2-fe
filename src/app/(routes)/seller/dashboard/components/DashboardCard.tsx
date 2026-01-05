@@ -13,8 +13,8 @@ const DashboardCard = ({ data }: DashboardCardProps) => {
     <div className="w-full">
       <div className="grid grid-cols-4 gap-5">
         {formattedData.map((item, index) => {
-          const totalOrders = item !== undefined && item.chageRate ? item?.chageRate.totalOrders : 0;
-          const totalSales = item !== undefined && item.chageRate ? item?.chageRate.totalSales : 0;
+          const totalOrders = item !== undefined && item.changeRate ? item?.changeRate.totalOrders : 0;
+          const totalSales = item !== undefined && item.changeRate ? item?.changeRate.totalSales : 0;
 
           return (
             <Fragment key={index}>

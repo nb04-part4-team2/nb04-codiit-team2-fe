@@ -26,7 +26,7 @@ export interface ChangeRate {
 export interface PeriodData {
   current: OrderSales;
   previous: OrderSales | null;
-  chageRate: ChangeRate;
+  changeRate: ChangeRate;
 }
 
 // 상품 구조 정보
