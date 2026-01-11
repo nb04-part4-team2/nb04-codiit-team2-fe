@@ -1,8 +1,8 @@
 // src/types/payment.d.ts
 
-export type PaymentStatus = "pending" | "completed" | "failed" | "calcelled" | "paid" | "processing";
-export type PaymentProvider = "kakaopay" | "toss" | "naverpay";
-export type PaymentMethod = "card" | "trans" | "vbank" | "point" | "kakaopay";
+export type PaymentStatus = "pending" | "completed" | "failed" | "cancelled" | "paid" | "processing";
+export type PaymentProvider = "kakaopay" | "tosspay" | "naverpay";
+export type PaymentMethod = "card" | "tosspay" | "naverpay" | "point" | "kakaopay";
 
 export interface Payment {
   id: string;
