@@ -1,41 +1,42 @@
 "use client";
 
 import MyPageMenu from "@/components/MyPageMenu";
+import Tab from "@/components/Tab";
 import InterestStore from "@/components/buyer/InterestStore";
 import MypageItemCard from "@/components/item/MypageItemCard";
 import MypageHeader from "@/components/mypage/MypageHeader";
 import { menuItems } from "@/data/buyerMenuItems";
 import useIntersectionObserver from "@/hooks/useIntersection";
 import { getAxiosInstance } from "@/lib/api/axiosInstance";
-import { OrderItemResponse, OrdersResponse } from "@/types/order";
+import { Order, OrdersResponse } from "@/types/order";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+const ORDER_TABS = [
+  { key: "CompletedPayment", label: "최근 주문 내역" },
+  { key: "WaitingPayment", label: "결제 대기" },
+];
+
 export default function MyPage() {
   const axiosInstance = getAxiosInstance();
   const [selectedMenu, setSelectedMenu] = useState("mypage");
-  const [showAllOrders, setShowAllOrders] = useState(false);
+  const [selectedTab, setSelectedTab] = useState("CompletedPayment");
   const router = useRouter();
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ["mypage-orders", showAllOrders],
+    queryKey: ["mypage-orders", selectedTab],
     queryFn: async ({ pageParam = 1 }) => {
       const { data } = await axiosInstance.get<OrdersResponse>("/orders", {
         params: {
-          status: "CompletedPayment",
-          limit: 3,
+          status: selectedTab,
+          limit: 10,
           page: pageParam,
         },
       });
-
-      // 모든 주문의 orderItems를 하나의 배열로 합치기
-      const items: OrderItemResponse[] = data.data.flatMap((order) => order.orderItems);
-
       return {
-        items,
+        orders: data.data,
         nextPage: pageParam < data.meta.totalPages ? pageParam + 1 : undefined,
-        totalPages: data.meta.totalPages,
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
@@ -43,16 +44,12 @@ export default function MyPage() {
   });
 
   const { setTarget } = useIntersectionObserver({
-    hasNextPage: showAllOrders && hasNextPage,
+    hasNextPage,
     fetchNextPage,
   });
 
-  const allItems = data?.pages.flatMap((page) => page.items) ?? [];
-  const displayedItems = showAllOrders ? allItems : allItems.slice(0, 3);
-
-  const handleShowMore = () => {
-    setShowAllOrders(true);
-  };
+  const allOrders = data?.pages.flatMap((page) => page.orders) ?? [];
+  const visibleOrders = allOrders.filter((order) => order.orderItems.some((item) => item.product));
 
   return (
     <div className="min-h-screen bg-white">
@@ -70,25 +67,26 @@ export default function MyPage() {
           <MypageHeader />
           <div className="flex w-full flex-col gap-15">
             <div className="w-full">
-              <div className="flex justify-between py-[0.5625rem]">
-                <span className="text-black01 text-lg/5 font-extrabold">최근 주문</span>
-                {!showAllOrders && allItems.length > 3 && (
-                  <button
-                    onClick={handleShowMore}
-                    className="text-black01 cursor-pointer text-base/4.5 font-normal hover:underline"
-                  >
-                    더보기
-                  </button>
-                )}
-              </div>
+              <Tab
+                tabs={ORDER_TABS}
+                value={selectedTab}
+                onChange={setSelectedTab}
+              />
               {isLoading ? (
                 <div className="flex justify-center py-8">로딩 중...</div>
-              ) : displayedItems.length === 0 ? (
-                <div className="flex justify-center py-8 text-gray-500">주문 내역이 없습니다.</div>
+              ) : visibleOrders.length === 0 ? (
+                <div className="flex justify-center py-8 text-gray-500">
+                  {selectedTab === "WaitingPayment" ? "결제 대기 중인 주문이 없습니다." : "주문 내역이 없습니다."}
+                </div>
               ) : (
-                <div className={`${showAllOrders ? "h-[600px] overflow-y-auto px-5" : ""}`}>
-                  <MypageItemCard purchases={displayedItems} />
-                  {showAllOrders && hasNextPage && (
+                <div className="h-[600px] overflow-y-auto px-5">
+                  {visibleOrders.map((order: Order) => (
+                    <MypageItemCard
+                      key={order.id}
+                      order={order}
+                    />
+                  ))}
+                  {hasNextPage && (
                     <div
                       ref={setTarget}
                       className="flex h-20 items-center justify-center"
