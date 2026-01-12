@@ -14,7 +14,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
     if ((!user || user.type !== "BUYER") && !isLoading) {
       router.replace("/products");
     }
-  }, [user, router, isLoading, pathname, setLoading]);
+  }, [user, router, isLoading, pathname]);
 
   if (!user || user.type !== "BUYER") {
     return (
