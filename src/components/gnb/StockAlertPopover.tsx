@@ -6,12 +6,12 @@ import { connectNotificationSSE, getNotifications, updateNotificationCheck } fro
 import { useToaster } from "@/proviers/toaster/toaster.hook";
 import styles from "@/styles/scrollbar.module.css";
 import { NotificationItem } from "@/types/notification";
-import { useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import "dayjs/locale/ko";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 dayjs.extend(relativeTime);
 dayjs.locale("ko");
@@ -49,7 +49,10 @@ export default function StockAlertPopover() {
   });
 
   // 모든 페이지의 알림을 하나의 배열로 합치기
-  const notifications = notificationData?.pages.flatMap((page) => page.list) ?? [];
+  const notifications = useMemo(
+    () => notificationData?.pages.flatMap((page) => page.list) ?? [],
+    [notificationData],
+  );
 
   // 알림 읽음 처리
   const mutation = useMutation({
@@ -128,7 +131,7 @@ export default function StockAlertPopover() {
     connect();
 
     return () => eventSource?.close();
-  }, [toaster]);
+  }, [queryClient, toaster]);
 
   // 팝오버 열릴 때
   useEffect(() => {
@@ -181,7 +184,9 @@ export default function StockAlertPopover() {
                   className="border-gray04 relative mb-5 flex flex-col border-b pb-4 last:mb-0 last:border-none"
                   onClick={() => handleClick(item.id)}
                 >
-                  {!item.isChecked && <span className="absolute top-0 right-0 h-[6px] w-[6px] rounded-full bg-red-500" />}
+                  {!item.isChecked && (
+                    <span className="absolute top-0 right-0 h-[6px] w-[6px] rounded-full bg-red-500" />
+                  )}
                   <p className="text-black01 h-11 text-sm font-normal">{item.content}</p>
                   <span className="text-gray01 mt-[5px] self-end text-sm">{dayjs(item.createdAt).fromNow()}</span>
                 </div>

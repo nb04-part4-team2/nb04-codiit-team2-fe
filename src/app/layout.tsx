@@ -1,6 +1,7 @@
 import GNB from "@/components/gnb";
 import "@/styles/globals.css";
 import type { Metadata } from "next";
+import Script from "next/script";
 import Providers from "./providers";
 
 export const metadata: Metadata = {
@@ -20,6 +21,8 @@ export default function RootLayout({
           href="https://cdn.rawgit.com/moonspam/NanumSquare/master/nanumsquare.css"
           rel="stylesheet"
         />
+        {/* 포트원 SDK 로드 */}
+        <Script src="https://cdn.iamport.kr/v1/iamport.js" />
       </head>
       <body>
         <Providers>

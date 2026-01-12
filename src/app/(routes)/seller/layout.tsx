@@ -15,7 +15,7 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
       console.log(accessToken);
       router.replace("/products");
     }
-  }, [accessToken, user, pathname, router, isLoading]);
+  }, [accessToken, user, pathname, router, isLoading, setLoading]);
 
   if (isLoading) return <></>;
 
