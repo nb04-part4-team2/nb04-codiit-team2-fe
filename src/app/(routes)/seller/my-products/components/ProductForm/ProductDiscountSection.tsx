@@ -40,6 +40,8 @@ export function ProductDiscountSection({
                     discountEnabledField.onChange(value);
                     if (value === false) {
                       periodEnabledField.onChange(false);
+                      periodStartField.onChange(null);
+                      periodEndField.onChange(null);
                     }
                   }}
                 >
@@ -120,7 +122,13 @@ export function ProductDiscountSection({
                     value={String(value)}
                     checked={periodEnabledField.value === value}
                     className="hidden"
-                    onChange={() => periodEnabledField.onChange(value)}
+                    onChange={() => {
+                      periodEnabledField.onChange(value);
+                      if (value === false) {
+                        periodStartField.onChange(null);
+                        periodEndField.onChange(null);
+                      }
+                    }}
                     disabled={value && !discountEnabledField.value}
                   />
                   <span className="">{label}</span>

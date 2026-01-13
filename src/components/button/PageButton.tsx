@@ -46,7 +46,7 @@ const PageButton = ({ total = 1, itemsPerPage, currentPage, onPageChange }: Page
       >
         <IoIosArrowBack className="size-5.5" />
       </button>
-      <div className="flex w-135 gap-2.5">
+      <div className="flex gap-2.5">
         {pageNumbers.map((page) => (
           <button
             className={`flex size-11.25 items-center justify-center rounded-md text-lg font-bold ${currentPage === page && "bg-black01 text-white"}`}

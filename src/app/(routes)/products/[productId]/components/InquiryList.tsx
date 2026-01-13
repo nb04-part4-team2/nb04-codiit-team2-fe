@@ -4,12 +4,10 @@ import Inquiry from "./Inquiry";
 
 interface InquiryListProps {
   data: InquiryData[];
-  currentPage: number;
-  itemPerPage: number;
 }
 
-const InquiryList = ({ data, currentPage, itemPerPage }: InquiryListProps) => {
-  const sortedInquiries = data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+const InquiryList = ({ data }: InquiryListProps) => {
+  const sortedInquiries = [...data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
     <div className="mb-15 w-380">
@@ -20,7 +18,7 @@ const InquiryList = ({ data, currentPage, itemPerPage }: InquiryListProps) => {
         <p className="w-1/5">답변상태</p>
       </div>
       <Divder />
-      {sortedInquiries.slice((currentPage - 1) * itemPerPage, currentPage * itemPerPage).map((inquiry) => (
+      {sortedInquiries.map((inquiry) => (
         <Inquiry
           key={inquiry.id}
           inquiry={inquiry}

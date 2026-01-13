@@ -2,7 +2,9 @@ import Modal from "@/components/Modal";
 import Button from "@/components/button/Button";
 import BoxInput from "@/components/input/BoxInput";
 import TextArea from "@/components/input/TextArea";
+import { uploadImageToS3 } from "@/lib/api/products";
 import { StoreCreateForm, storeCreateSchema } from "@/lib/schemas/storecreate.schema";
+import { useToaster } from "@/proviers/toaster/toaster.hook";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -13,10 +15,9 @@ interface StoreFormProps {
   onClose: () => void;
   onSubmit: (data: StoreCreateForm) => Promise<void>;
   defaultValues?: Partial<StoreCreateForm>;
-  imagePreviewUrl?: string;
 }
 
-export default function StoreForm({ mode, onClose, onSubmit, defaultValues, imagePreviewUrl }: StoreFormProps) {
+export default function StoreForm({ mode, onClose, onSubmit, defaultValues }: StoreFormProps) {
   const {
     register,
     handleSubmit,
@@ -27,6 +28,7 @@ export default function StoreForm({ mode, onClose, onSubmit, defaultValues, imag
     resolver: zodResolver(storeCreateSchema),
     defaultValues,
   });
+  const toaster = useToaster();
 
   // defaultValues 변경 시 폼 리셋
   useEffect(() => {
@@ -41,40 +43,25 @@ export default function StoreForm({ mode, onClose, onSubmit, defaultValues, imag
     control,
   });
 
-  const [preview, setPreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const isValidImage = (src?: string | null) => {
-    if (!src || src.trim() === "") return false;
-    return src.startsWith("http://") || src.startsWith("https://") || src.startsWith("/") || src.startsWith("blob:");
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      imageField.onChange(file);
-
-      const objectUrl = URL.createObjectURL(file);
-      setPreview(objectUrl);
+      setIsUploading(true);
+      try {
+        const response = await uploadImageToS3(file);
+        imageField.onChange(response.url);
+        // setPreview(response.url);
+        toaster("info", "이미지를 업로드했습니다.");
+      } catch (error) {
+        toaster("warn", "이미지 업로드에 실패했습니다.");
+        console.error(error);
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
-
-  useEffect(() => {
-    if (typeof imageField.value === "string" && imageField.value) {
-      setPreview(imageField.value);
-    }
-  }, [imageField.value]);
-
-  useEffect(() => {
-    return () => {
-      if (preview) URL.revokeObjectURL(preview);
-    };
-  }, [preview]);
-
-  useEffect(() => {
-    if (imagePreviewUrl) {
-      setPreview(imagePreviewUrl);
-    }
-  }, [imagePreviewUrl]);
 
   return (
     <Modal
@@ -82,7 +69,7 @@ export default function StoreForm({ mode, onClose, onSubmit, defaultValues, imag
       onClose={onClose}
     >
       <form
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={handleSubmit(onSubmit)} // Use the new wrapper function
         className="relative w-[599px] text-left"
       >
         <div className="relative w-[599px] text-left">
@@ -141,17 +128,22 @@ export default function StoreForm({ mode, onClose, onSubmit, defaultValues, imag
               id="store-image-input"
               onChange={handleImageChange}
               className="hidden"
+              disabled={isUploading}
             />
             <button
               type="button"
               onClick={() => document.getElementById("store-image-input")?.click()}
-              className="bg-gray05 relative h-[240px] w-[240px] overflow-hidden rounded-md p-[100px]"
+              className="bg-gray05 relative flex h-[240px] w-[240px] items-center justify-center overflow-hidden rounded-md p-[100px]"
+              disabled={isUploading}
             >
-              {preview && isValidImage(preview) ? (
+              {isUploading ? (
+                <div>Uploading...</div>
+              ) : imageField.value ? (
                 <Image
-                  src={preview}
+                  src={imageField.value}
                   alt="선택된 이미지"
                   fill
+                  sizes="(max-width: 768px) 100vw, 240px"
                   className="object-cover"
                 />
               ) : (
@@ -194,6 +186,7 @@ export default function StoreForm({ mode, onClose, onSubmit, defaultValues, imag
             variant="primary"
             color="black"
             className="h-[65px] w-full text-[18px]"
+            disabled={isUploading}
           />
         </div>
       </form>

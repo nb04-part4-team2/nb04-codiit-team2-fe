@@ -1,16 +1,17 @@
 "use client";
 
+import useIntersectionObserver from "@/hooks/useIntersection";
 import { postRefresh } from "@/lib/api/auth";
 import { connectNotificationSSE, getNotifications, updateNotificationCheck } from "@/lib/api/notification";
 import { useToaster } from "@/proviers/toaster/toaster.hook";
 import styles from "@/styles/scrollbar.module.css";
 import { NotificationItem } from "@/types/notification";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import "dayjs/locale/ko";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 dayjs.extend(relativeTime);
 dayjs.locale("ko");
@@ -23,14 +24,35 @@ export default function StockAlertPopover() {
 
   const [isOpen, setIsOpen] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const PAGE_SIZE = 10;
 
-  // 알림 목록 가져오기
-  const { data } = useQuery({
+  // 알림 목록 가져오기 (무한 스크롤)
+  const {
+    data: notificationData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["notifications"],
-    queryFn: getNotifications,
+    queryFn: async ({ pageParam = 1 }) => {
+      return getNotifications({ page: pageParam, pageSize: PAGE_SIZE });
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      // 마지막 페이지의 아이템 수가 pageSize보다 적으면 더 이상 페이지가 없음
+      if (lastPage.list.length < PAGE_SIZE) {
+        return undefined;
+      }
+      return allPages.length + 1;
+    },
+    initialPageParam: 1,
     staleTime: 0,
   });
+
+  // 모든 페이지의 알림을 하나의 배열로 합치기
+  const notifications = useMemo(
+    () => notificationData?.pages.flatMap((page) => page.list) ?? [],
+    [notificationData],
+  );
 
   // 알림 읽음 처리
   const mutation = useMutation({
@@ -57,12 +79,12 @@ export default function StockAlertPopover() {
     };
   }, [isOpen]);
 
+  // 읽지 않은 알림이 있는지 확인
   useEffect(() => {
-    if (data) {
-      setNotifications(data);
-      setHasUnread(data.some((n) => !n.isChecked));
+    if (notifications.length > 0) {
+      setHasUnread(notifications.some((n) => !n.isChecked));
     }
-  }, [data]);
+  }, [notifications]);
 
   // SSE 연결
   useEffect(() => {
@@ -80,7 +102,8 @@ export default function StockAlertPopover() {
           // id 없는 경우
           if (!newAlarm?.id) return;
 
-          setNotifications((prev) => [newAlarm, ...prev]);
+          // 새 알림이 오면 쿼리 무효화하여 첫 페이지를 다시 가져옴
+          queryClient.invalidateQueries({ queryKey: ["notifications"] });
           setHasUnread(true); // 배지
         } catch {
           console.warn("잘못된 데이터:", event.data);
@@ -108,7 +131,7 @@ export default function StockAlertPopover() {
     connect();
 
     return () => eventSource?.close();
-  }, [toaster]);
+  }, [queryClient, toaster]);
 
   // 팝오버 열릴 때
   useEffect(() => {
@@ -118,9 +141,15 @@ export default function StockAlertPopover() {
     }
   }, [isOpen, queryClient]);
 
+  // 무한 스크롤을 위한 Intersection Observer
+  const { setTarget } = useIntersectionObserver({
+    threshold: 0.1,
+    hasNextPage,
+    fetchNextPage,
+  });
+
   const handleClick = (alarmId: string) => {
     mutation.mutate(alarmId);
-    setNotifications((prev) => prev.map((n) => (n.id === alarmId ? { ...n, isChecked: true } : n)));
   };
 
   return (
@@ -148,17 +177,30 @@ export default function StockAlertPopover() {
           {notifications.length === 0 ? (
             <p className="text-black01 pb-4 text-sm font-normal">알림이 없습니다.</p>
           ) : (
-            notifications.map((item) => (
-              <div
-                key={item.id}
-                className="border-gray04 relative mb-5 flex flex-col border-b pb-4 last:mb-0 last:border-none"
-                onClick={() => handleClick(item.id)}
-              >
-                {!item.isChecked && <span className="absolute top-0 right-0 h-[6px] w-[6px] rounded-full bg-red-500" />}
-                <p className="text-black01 h-11 text-sm font-normal">{item.content}</p>
-                <span className="text-gray01 mt-[5px] self-end text-sm">{dayjs(item.createdAt).fromNow()}</span>
-              </div>
-            ))
+            <>
+              {notifications.map((item) => (
+                <div
+                  key={item.id}
+                  className="border-gray04 relative mb-5 flex flex-col border-b pb-4 last:mb-0 last:border-none"
+                  onClick={() => handleClick(item.id)}
+                >
+                  {!item.isChecked && (
+                    <span className="absolute top-0 right-0 h-[6px] w-[6px] rounded-full bg-red-500" />
+                  )}
+                  <p className="text-black01 h-11 text-sm font-normal">{item.content}</p>
+                  <span className="text-gray01 mt-[5px] self-end text-sm">{dayjs(item.createdAt).fromNow()}</span>
+                </div>
+              ))}
+              {/* 무한 스크롤을 위한 타겟 요소 */}
+              {hasNextPage && (
+                <div
+                  ref={setTarget}
+                  className="flex items-center justify-center py-4"
+                >
+                  {isFetchingNextPage && <p className="text-gray01 text-sm">로딩 중...</p>}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

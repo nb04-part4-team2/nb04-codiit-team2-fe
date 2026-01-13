@@ -6,38 +6,38 @@ interface EditProfileParams {
   currentPassword: string;
   nickname?: string;
   newPassword?: string;
-  imageFile?: File | null; // 이미지 파일 추가
+  imageUrl?: string | null;
 }
 
-export const editUserProfile = async ({ currentPassword, nickname, newPassword, imageFile }: EditProfileParams) => {
+export const editUserProfile = async ({
+  currentPassword,
+  nickname,
+  newPassword,
+  imageUrl,
+}: EditProfileParams) => {
   const axiosInstance = getAxiosInstance();
-  const formData = new FormData();
 
-  formData.append("currentPassword", currentPassword);
+  const payload: { [key: string]: string } = {
+    currentPassword,
+  };
 
   if (nickname && nickname.trim() !== "") {
-    formData.append("name", nickname.trim());
+    payload.name = nickname.trim();
   }
 
   if (newPassword && newPassword.trim() !== "") {
-    formData.append("password", newPassword.trim());
+    payload.password = newPassword.trim();
   }
 
-  if (imageFile) {
-    formData.append("image", imageFile);
+  if (imageUrl) {
+    payload.imageUrl = imageUrl;
   }
-
   try {
-    const { data } = await axiosInstance.patch("/users/me", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
+    const { data } = await axiosInstance.patch("/users/me", payload);
     return data;
   } catch (err) {
     const error = err as AxiosError;
-    console.error("프로필 수정 실패", error.response?.data || error.message);
+    console.error("프로필 수정 실패 (editUserProfile catch block):", error.response?.data || error.message); // Modified log
     throw err;
   }
 };

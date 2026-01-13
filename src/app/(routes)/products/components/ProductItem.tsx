@@ -32,8 +32,8 @@ const ProductItem = ({ product, store = false }: ProductItemProps) => {
         {store && <p className="text-black02 mb-2.5 text-sm leading-none">{product.storeName}</p>}
         <p className="mb-2.5 overflow-hidden leading-5 font-bold text-ellipsis whitespace-nowrap">{product.name}</p>
         <div className="mb-2.5 flex gap-1.25 text-lg leading-5">
-          <p className="font-extrabold">{product.discountPrice.toLocaleString()}원</p>
-          {product.discountRate !== 0 && (
+          <p className="font-extrabold">{Math.floor(product.discountPrice).toLocaleString()}원</p>
+          {product.price > product.discountPrice && (
             <p className="text-gray01 font-bold line-through">{product.price.toLocaleString()}원</p>
           )}
         </div>

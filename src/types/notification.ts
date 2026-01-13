@@ -6,3 +6,8 @@ export interface NotificationItem {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface NotificationResponse {
+  list: NotificationItem[];
+  totalCount: number;
+}

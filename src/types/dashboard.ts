@@ -26,7 +26,7 @@ export interface ChangeRate {
 export interface PeriodData {
   current: OrderSales;
   previous: OrderSales | null;
-  chageRate: ChangeRate;
+  changeRate: ChangeRate;
 }
 
 // 상품 구조 정보
@@ -39,7 +39,7 @@ interface Product {
 // 가장 많이 팔린상품 정보
 export interface TopSale {
   totalOrders: number;
-  prodcuts: Product;
+  product: Product;
 }
 
 // 가격 구간별 매출 통계

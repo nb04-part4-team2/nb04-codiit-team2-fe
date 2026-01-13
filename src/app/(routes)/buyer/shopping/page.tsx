@@ -6,6 +6,8 @@ import { getAxiosInstance } from "@/lib/api/axiosInstance";
 import { useToaster } from "@/proviers/toaster/toaster.hook";
 import { useOrderStore } from "@/store/orderStore";
 import { Cart } from "@/types/cart";
+import { OrderItemInfo } from "@/types/order";
+import { ProductInfoData } from "@/types/Product";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -111,7 +113,7 @@ export default function ShoppingPage() {
     .reduce((sum, item) => {
       const price = item.product.price;
       const discountRate = item.product.discountRate;
-      const discountedPrice = price * (1 - discountRate / 100);
+      const discountedPrice = Math.floor((item.product as ProductInfoData).discountPrice ?? price * (1 - discountRate / 100));
       const itemTotal = discountedPrice * item.quantity;
       return sum + itemTotal;
     }, 0);
@@ -133,8 +135,17 @@ export default function ShoppingPage() {
       return;
     }
 
+    const orderItems: OrderItemInfo[] = selectedItems.map((item) => ({
+      id: item.id,
+      productId: item.productId,
+      sizeId: item.sizeId,
+      quantity: item.quantity,
+      product: item.product,
+      checked: item.checked,
+    }));
+
     // store에 선택된 아이템들 저장
-    setSelectedItems(selectedItems);
+    setSelectedItems(orderItems);
     // 결제 페이지로 이동
     router.push("/buyer/order");
   };

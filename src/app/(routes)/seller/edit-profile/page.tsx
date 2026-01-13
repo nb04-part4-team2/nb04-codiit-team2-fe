@@ -5,6 +5,7 @@ import ProfileButton from "@/components/button/ProfileButton";
 import ProfileInput from "@/components/input/ProfileInput";
 import { menuItems } from "@/data/sellerMenuItems";
 import { getAxiosInstance } from "@/lib/api/axiosInstance";
+import { uploadImageToS3 } from "@/lib/api/products";
 import { editUserProfile } from "@/lib/api/userProfile";
 import { useToaster } from "@/proviers/toaster/toaster.hook";
 import { useUserStore } from "@/stores/userStore";
@@ -21,7 +22,8 @@ export default function EditProfilePage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [selectedMenu, setSelectedMenu] = useState("editProfile");
   const [passwordError, setPasswordError] = useState("");
   const toaster = useToaster();
@@ -47,7 +49,7 @@ export default function EditProfilePage() {
 
       // 인풋창 상태 전부 초기화
       setNickname("");
-      setSelectedImage(null);
+      setImageUrl(null);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -63,10 +65,22 @@ export default function EditProfilePage() {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
-    input.onchange = (e: Event) => {
+    input.onchange = async (e: Event) => {
       const target = e.target as HTMLInputElement;
       const file = target.files?.[0];
-      if (file) setSelectedImage(file);
+      if (file) {
+        setIsUploading(true);
+        try {
+          const response = await uploadImageToS3(file);
+          setImageUrl(response.url);
+          toaster("info", "이미지를 업로드했습니다.");
+        } catch (error) {
+          toaster("warn", "이미지 업로드에 실패했습니다.");
+          console.error(error);
+        } finally {
+          setIsUploading(false);
+        }
+      }
     };
     input.click();
   };
@@ -74,6 +88,8 @@ export default function EditProfilePage() {
   const isValid = currentPassword.trim() !== "";
 
   if (!user) return null;
+
+  const profileImgSrc = imageUrl || user.image || "/images/profile-seller.png";
 
   return (
     <div className="min-h-screen bg-white">
@@ -97,23 +113,27 @@ export default function EditProfilePage() {
           {/* 프로필 이미지 */}
           <div className="relative mb-6 h-24 w-24">
             <Image
-              src={selectedImage ? URL.createObjectURL(selectedImage) : user.image}
+              src={profileImgSrc}
               alt={user.name}
-              width={96}
-              height={96}
+              fill // fill을 사용하면 부모 크기에 맞게 채워집니다
               className="h-24 w-24 rounded-full object-cover"
             />
             <div className="absolute right-0 bottom-0">
               <button
                 onClick={handleEditImage}
+                disabled={isUploading}
                 className="border-gray03 absolute right-0 bottom-0 flex h-[35px] w-[35px] items-center justify-center rounded-full border bg-white"
               >
-                <Image
-                  src="/icon/edit.svg" // 경로 확인 필요
-                  alt="Edit Icon"
-                  width={24}
-                  height={24}
-                />
+                {isUploading ? (
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+                ) : (
+                  <Image
+                    src="/icon/edit.svg" // 경로 확인 필요
+                    alt="Edit Icon"
+                    width={24}
+                    height={24}
+                  />
+                )}
               </button>
             </div>
           </div>
@@ -174,6 +194,7 @@ export default function EditProfilePage() {
             <ProfileButton
               label="수정하기"
               onClick={() => {
+                console.log("Attempting to update profile...");
                 if (newPassword && newPassword !== confirmPassword) {
                   alert("새 비밀번호가 일치하지 않습니다.");
                   return;
@@ -183,10 +204,10 @@ export default function EditProfilePage() {
                   currentPassword,
                   nickname: nickname.trim() || undefined,
                   newPassword: newPassword.trim() || undefined,
-                  imageFile: selectedImage || null, // 이미지 파일 전달
+                  imageUrl: imageUrl,
                 });
               }}
-              disabled={!isValid || !!passwordError}
+              disabled={!isValid || !!passwordError || isUploading}
             />
           </div>
         </div>

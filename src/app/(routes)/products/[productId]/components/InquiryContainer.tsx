@@ -5,7 +5,7 @@ import PageButton from "@/components/button/PageButton";
 import { getProductInquiry } from "@/lib/api/products";
 import { useToaster } from "@/proviers/toaster/toaster.hook";
 import { useUserStore } from "@/stores/userStore";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import InquiryCreateModal from "./InquiryCreateModal";
 import InquiryList from "./InquiryList";
@@ -21,10 +21,11 @@ const InquiryContainer = ({ productId }: InquiryContainerProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { user } = useUserStore();
   const toaster = useToaster();
+  const queryClient = useQueryClient();
 
-  const { data, refetch: refetchInquiry } = useQuery({
-    queryKey: ["inquiries", productId],
-    queryFn: () => getProductInquiry(productId),
+  const { data } = useQuery({
+    queryKey: ["inquiries", productId, currentPage],
+    queryFn: () => getProductInquiry(productId, { page: currentPage, pageSize: ITEMS_PER_PAGE }),
   });
 
   const setModalOpen = () => {
@@ -35,9 +36,18 @@ const InquiryContainer = ({ productId }: InquiryContainerProps) => {
     setIsModalOpen(true);
   };
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  // 모달이 닫힐 때 문의 목록 새로고침 (새 문의가 추가되었을 수 있음)
   useEffect(() => {
-    refetchInquiry();
-  }, [refetchInquiry, isModalOpen]);
+    if (!isModalOpen) {
+      // 첫 페이지로 리셋하고 데이터 새로고침
+      setCurrentPage(1);
+      queryClient.invalidateQueries({ queryKey: ["inquiries", productId] });
+    }
+  }, [isModalOpen, productId, queryClient]);
 
   return (
     <div className="flex flex-col">
@@ -54,15 +64,13 @@ const InquiryContainer = ({ productId }: InquiryContainerProps) => {
       {data?.list && (
         <InquiryList
           data={data.list}
-          currentPage={currentPage}
-          itemPerPage={ITEMS_PER_PAGE}
         />
       )}
       <PageButton
         currentPage={currentPage}
         total={data?.totalCount}
         itemsPerPage={ITEMS_PER_PAGE}
-        onPageChange={setCurrentPage}
+        onPageChange={handlePageChange}
       />
       {isModalOpen && (
         <InquiryCreateModal

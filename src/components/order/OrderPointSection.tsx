@@ -17,10 +17,8 @@ export default function OrderPointSection() {
 
   // 주문 상품의 총 가격 계산
   const totalProductPrice = selectedItems.reduce((sum, item) => {
-    const price = item.product.price;
-    const discountRate = item.product.discountRate;
-    const discountedPrice = price * (1 - discountRate / 100);
-    return sum + discountedPrice * item.quantity;
+    const finalPrice = item.product.discountPrice;
+    return sum + Math.floor(finalPrice) * item.quantity;
   }, 0);
 
   // 사용 가능한 최대 포인트 (보유 포인트와 총 상품 가격 중 작은 값)

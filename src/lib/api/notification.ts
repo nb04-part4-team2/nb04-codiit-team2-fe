@@ -1,6 +1,6 @@
 import { useApiStore } from "@/stores/useApiStore";
 import { useUserStore } from "@/stores/userStore";
-import { NotificationItem } from "@/types/notification";
+import { NotificationResponse } from "@/types/notification";
 import { EventSourcePolyfill } from "event-source-polyfill";
 import { getAxiosInstance } from "./axiosInstance";
 
@@ -17,9 +17,9 @@ export const connectNotificationSSE = () => {
 };
 
 // 알림 목록 가져오기
-export const getNotifications = async (): Promise<NotificationItem[]> => {
+export const getNotifications = async (params?: { page?: number; pageSize?: number }): Promise<NotificationResponse> => {
   const axiosInstance = getAxiosInstance();
-  const response = await axiosInstance.get("/notifications");
+  const response = await axiosInstance.get("/notifications", { params });
   return response.data;
 };
 

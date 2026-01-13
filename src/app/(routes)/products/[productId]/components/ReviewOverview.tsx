@@ -6,9 +6,11 @@ interface ReviewOverviewProps {
 }
 
 const ReviewOverview = ({ reviewCount }: ReviewOverviewProps) => {
-  const { sumScore, ...rest } = reviewCount as ReviewCount;
+  // const { sumScore, ...rest } = reviewCount as ReviewCount;
+  const { sumScore = 0, ...rest } = reviewCount;
 
   const ratings = [rest.rate5Length, rest.rate4Length, rest.rate3Length, rest.rate2Length, rest.rate1Length];
+  const maxRating = Math.max(...ratings);
 
   return (
     <div className="border-gray03 flex h-68.75 items-center justify-between rounded-xl border px-61">
@@ -31,7 +33,8 @@ const ReviewOverview = ({ reviewCount }: ReviewOverviewProps) => {
             <div className="bg-gray04 h-2.5 w-92.5 rounded-xl">
               <div
                 className={`bg-yellow01 h-2.5 rounded-xl`}
-                style={{ width: `${(rating / Math.max(...ratings)) * 23.125}rem` }}
+                // style={{ width: `${(rating / Math.max(...ratings)) * 23.125}rem` }}
+                style={{ width: `${maxRating > 0 ? (rating / maxRating) * 23.125 : 0}rem` }}
               />
             </div>
             <p>{rating}</p>

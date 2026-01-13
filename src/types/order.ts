@@ -1,3 +1,16 @@
+import { Payment, PaymentStatus } from "./payment";
+import { CartProduct } from "./cart";
+import { ProductInfoData } from "./Product";
+
+// 결제에 필요한 정보 타입
+export interface PaymentInfo {
+  merchant_uid: string;
+  name: string;
+  amount: number;
+  buyer_email?: string;
+  buyer_name?: string;
+}
+
 export interface OrderItem {
   id: string;
   price: number;
@@ -6,6 +19,7 @@ export interface OrderItem {
   productId: string;
   product: {
     name: string;
+    image?: string; // 이미지 속성 추가
     reviews: Array<{
       id: string;
       rating: number;
@@ -30,13 +44,9 @@ export interface Order {
   totalQuantity: number;
   usePoint: number;
   createdAt: string;
+  paymentStatus: PaymentStatus
   orderItems: OrderItem[];
-  payments: {
-    id: string;
-    price: number;
-    status: string;
-    createdAt: string;
-  };
+  payments: Payment[]; // Payment 타입 배열로 수정
 }
 
 export interface OrdersResponse {
@@ -85,4 +95,13 @@ export interface OrderItemResponse {
       ko: string;
     };
   };
+}
+
+export interface OrderItemInfo {
+  id: string;
+  productId: string;
+  sizeId: number;
+  quantity: number;
+  product: CartProduct | ProductInfoData;
+  checked?: boolean;
 }
